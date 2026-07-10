@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Entities />
+  <Roles />
+  <Workflows>
+    <Workflow WorkflowId="{a1f3c2e0-0001-4b6a-9c11-000000000001}" Name="Purchase Request Approval">
+      <JsonFileName>/Workflows/PurchaseRequestApproval-A1F3C2E0.json</JsonFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>5</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <PrimaryEntity>none</PrimaryEntity>
+      <StatusCode>2</StatusCode>
+    </Workflow>
+  </Workflows>
+  <EntityMaps />
+  <EntityRelationships />
+  <SolutionPluginAssemblies />
+  <Languages>
+    <Language>1033</Language>
+  </Languages>
+</ImportExportXml>

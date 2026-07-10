@@ -1,0 +1,23 @@
+#  Power Apps canvas source — Power Fx YAML
+#  Unpacked with: pac canvas unpack --msapp RequestHub.msapp --sources ./src
+#  Repack with:   pac canvas pack   --msapp RequestHub.msapp --sources ./src
+#
+#  "Request Hub" — a lightweight canvas app that lets staff submit a purchase
+#  request and track its status, reading/writing the same SharePoint list that
+#  the Power Automate approval flow uses. Demonstrates the Power Apps half of
+#  the suite (the no-code/low-code front end on top of the automation).
+
+App:
+    Properties:
+        BackEnabled: =false
+        Theme: =PowerAppsTheme
+        OnStart: |
+            =Set(
+                gblCurrentUser,
+                {
+                    Email: User().Email,
+                    Name: User().FullName
+                }
+            );
+            Set(gblBrandInk, RGBA(14, 33, 56, 1));
+            Set(gblBrandAccent, RGBA(26, 91, 196, 1))

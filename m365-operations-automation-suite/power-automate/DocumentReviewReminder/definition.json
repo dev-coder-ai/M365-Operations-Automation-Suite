@@ -1,0 +1,133 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "$connections": { "defaultValue": {}, "type": "Object" },
+    "$authentication": { "defaultValue": {}, "type": "SecureObject" },
+    "ReminderWindowDays": {
+      "defaultValue": 7,
+      "type": "Int",
+      "metadata": { "description": "Send a reminder when a document's review date falls within this many days." }
+    }
+  },
+  "triggers": {
+    "Every_weekday_at_8am": {
+      "type": "Recurrence",
+      "recurrence": {
+        "frequency": "Week",
+        "interval": 1,
+        "schedule": {
+          "hours": [ "8" ],
+          "weekDays": [ "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" ]
+        },
+        "timeZone": "GMT Standard Time"
+      }
+    }
+  },
+  "actions": {
+    "Get_documents_due_for_review": {
+      "runAfter": {},
+      "type": "OpenApiConnection",
+      "inputs": {
+        "host": {
+          "connectionName": "shared_sharepointonline",
+          "operationId": "GetItems",
+          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+        },
+        "parameters": {
+          "dataset": "https://contoso.sharepoint.com/sites/Operations",
+          "table": "Documents Register",
+          "$filter": "ReviewStatus ne 'Reminded' and ReviewDate le datetime'@{addDays(utcNow(), parameters('ReminderWindowDays'), 'yyyy-MM-ddTHH:mm:ssZ')}'",
+          "$orderby": "ReviewDate asc",
+          "$top": 200
+        },
+        "authentication": "@parameters('$authentication')"
+      }
+    },
+    "For_each_document": {
+      "runAfter": {
+        "Get_documents_due_for_review": [ "Succeeded" ]
+      },
+      "type": "Foreach",
+      "foreach": "@outputs('Get_documents_due_for_review')?['body/value']",
+      "actions": {
+        "Determine_if_overdue": {
+          "runAfter": {},
+          "type": "If",
+          "expression": {
+            "less": [
+              "@items('For_each_document')?['ReviewDate']",
+              "@utcNow()"
+            ]
+          },
+          "actions": {
+            "Email_owner_overdue": {
+              "runAfter": {},
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_office365",
+                  "operationId": "SendEmailV2",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                },
+                "parameters": {
+                  "emailMessage/To": "@items('For_each_document')?['DocumentOwner']?['Email']",
+                  "emailMessage/Subject": "OVERDUE review: @{items('For_each_document')?['Title']}",
+                  "emailMessage/Importance": "High",
+                  "emailMessage/Body": "<p>The document <b>@{items('For_each_document')?['Title']}</b> is past its review date (@{formatDateTime(items('For_each_document')?['ReviewDate'], 'dd MMM yyyy')}). Please review and update its status.</p>"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Email_owner_due_soon": {
+                "runAfter": {},
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": {
+                    "connectionName": "shared_office365",
+                    "operationId": "SendEmailV2",
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                  },
+                  "parameters": {
+                    "emailMessage/To": "@items('For_each_document')?['DocumentOwner']?['Email']",
+                    "emailMessage/Subject": "Review due soon: @{items('For_each_document')?['Title']}",
+                    "emailMessage/Body": "<p>The document <b>@{items('For_each_document')?['Title']}</b> is due for review on @{formatDateTime(items('For_each_document')?['ReviewDate'], 'dd MMM yyyy')}.</p>"
+                  },
+                  "authentication": "@parameters('$authentication')"
+                }
+              }
+            }
+          }
+        },
+        "Mark_as_reminded": {
+          "runAfter": {
+            "Determine_if_overdue": [ "Succeeded" ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "PatchItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://contoso.sharepoint.com/sites/Operations",
+              "table": "Documents Register",
+              "id": "@items('For_each_document')?['ID']",
+              "item/ReviewStatus/Value": "Reminded",
+              "item/LastReminderSent": "@utcNow()"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "runtimeConfiguration": {
+        "concurrency": { "repetitions": 8 }
+      }
+    }
+  },
+  "outputs": {}
+}

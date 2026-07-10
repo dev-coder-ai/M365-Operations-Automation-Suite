@@ -1,0 +1,123 @@
+#  Request Hub — main screen
+#  A submit form (top) + a personal request tracker gallery (bottom),
+#  both bound to the 'Purchase Requests' SharePoint list.
+
+Screens:
+    RequestHubScreen:
+        Properties:
+            Fill: =RGBA(233, 237, 241, 1)
+        Children:
+            - HeaderLabel:
+                Control: Label
+                Properties:
+                    Text: ="Submit a purchase request"
+                    Color: =gblBrandInk
+                    Size: =22
+                    FontWeight: =FontWeight.Semibold
+                    X: =40
+                    Y: =32
+                    Width: =Parent.Width - 80
+                    Height: =48
+
+            - RequestForm:
+                Control: Form
+                Properties:
+                    DataSource: ='Purchase Requests'
+                    DefaultMode: =FormMode.New
+                    X: =40
+                    Y: =96
+                    Width: =Parent.Width - 80
+                    Height: =360
+                    Item: =Defaults('Purchase Requests')
+
+            - SubmitButton:
+                Control: Button
+                Properties:
+                    Text: ="Submit request"
+                    Fill: =gblBrandAccent
+                    Color: =RGBA(255, 255, 255, 1)
+                    X: =40
+                    Y: =472
+                    Width: =200
+                    Height: =44
+                    OnSelect: |
+                        =SubmitForm(RequestForm);
+                        If(
+                            RequestForm.Error = "",
+                            Notify("Request submitted — you'll be notified when it's decided.", NotificationType.Success);
+                            ResetForm(RequestForm),
+                            Notify("Something went wrong: " & RequestForm.Error, NotificationType.Error)
+                        )
+
+            - MyRequestsLabel:
+                Control: Label
+                Properties:
+                    Text: ="My recent requests"
+                    Color: =gblBrandInk
+                    Size: =18
+                    FontWeight: =FontWeight.Semibold
+                    X: =40
+                    Y: =544
+                    Width: =Parent.Width - 80
+                    Height: =40
+
+            - MyRequestsGallery:
+                Control: Gallery
+                Variant: galleryVertical
+                Properties:
+                    Items: |
+                        =SortByColumns(
+                            Filter(
+                                'Purchase Requests',
+                                Requestor = gblCurrentUser.Email
+                            ),
+                            "Created",
+                            SortOrder.Descending
+                        )
+                    X: =40
+                    Y: =592
+                    Width: =Parent.Width - 80
+                    Height: =Parent.Height - 632
+                    TemplateSize: =72
+                Children:
+                    - ItemTitle:
+                        Control: Label
+                        Properties:
+                            Text: =ThisItem.Title
+                            FontWeight: =FontWeight.Semibold
+                            X: =16
+                            Y: =10
+                            Width: =Parent.TemplateWidth - 180
+                            Height: =28
+                    - ItemAmount:
+                        Control: Label
+                        Properties:
+                            Text: =Text(ThisItem.Amount, "[$-en-GB]£#,##0.00")
+                            Color: =RGBA(86, 105, 126, 1)
+                            X: =16
+                            Y: =38
+                            Width: =200
+                            Height: =24
+                    - StatusBadge:
+                        Control: Label
+                        Properties:
+                            Text: =ThisItem.Status.Value
+                            Align: =Align.Center
+                            X: =Parent.TemplateWidth - 160
+                            Y: =22
+                            Width: =128
+                            Height: =32
+                            Fill: |
+                                =Switch(
+                                    ThisItem.Status.Value,
+                                    "Approved", RGBA(46, 125, 84, 0.15),
+                                    "Rejected", RGBA(176, 86, 63, 0.15),
+                                    RGBA(210, 132, 42, 0.15)
+                                )
+                            Color: |
+                                =Switch(
+                                    ThisItem.Status.Value,
+                                    "Approved", RGBA(46, 125, 84, 1),
+                                    "Rejected", RGBA(176, 86, 63, 1),
+                                    RGBA(156, 100, 24, 1)
+                                )
